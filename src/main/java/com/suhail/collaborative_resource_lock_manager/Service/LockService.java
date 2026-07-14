@@ -75,7 +75,18 @@ public class LockService  {
         historyService.logEvent(resourceId, clientId, "RELEASED", null);
         return LockResult.RELEASED;
     }
+    public record LockStatus(boolean locked, String holder, long remainingSeconds) {}
 
+    public LockStatus checkStatus(String resourceId) {
+        String currentHolder = redisTemplate.opsForValue().get(resourceId);
+
+        if (currentHolder == null) {
+            return new LockStatus(false, null, 0);
+        }
+
+        Long remaining = redisTemplate.getExpire(resourceId, TimeUnit.SECONDS);
+        return new LockStatus(true, currentHolder, remaining != null ? remaining : 0);
+    }
 
 
 
