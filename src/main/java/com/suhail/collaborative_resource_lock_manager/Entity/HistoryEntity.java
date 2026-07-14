@@ -21,11 +21,11 @@ public class HistoryEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     int id;
-    String resourceID;
-    String clientID;
-    String eventType;
-    LocalDateTime eventTimestamp;
-    LocalDateTime lockExpireAt;
+    private String resourceId;
+    private String clientId;
+    private String eventType;
+    private LocalDateTime eventTimestamp;
+    private LocalDateTime lockExpireAt;
 
 
 }
