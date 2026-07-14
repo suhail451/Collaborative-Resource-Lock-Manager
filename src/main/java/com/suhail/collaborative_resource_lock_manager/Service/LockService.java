@@ -15,7 +15,8 @@ public class LockService  {
         ALREADY_HELD,
         NOT_HELD,
         NOT_OWNER,
-        RENEW
+        RENEW,
+        RELEASED
 
     }
 
@@ -59,6 +60,20 @@ public class LockService  {
         return LockResult.RENEW;
 
 
+    }
+    public LockResult releaseLock(String resourceId, String clientId) {
+        String currentHolder = redisTemplate.opsForValue().get(resourceId);
+
+        if (currentHolder == null) {
+            return LockResult.NOT_HELD;
+        }
+        if (!currentHolder.equals(clientId)) {
+            return LockResult.NOT_OWNER;
+        }
+
+        redisTemplate.delete(resourceId);
+        historyService.logEvent(resourceId, clientId, "RELEASED", null);
+        return LockResult.RELEASED;
     }
 
 
