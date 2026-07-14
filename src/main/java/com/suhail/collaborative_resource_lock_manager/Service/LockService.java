@@ -40,6 +40,28 @@ public class LockService  {
 
     }
 
+    public LockResult renewLock(String resourceId,String clientId){
+
+        String KeyOwner=redisTemplate.opsForValue()
+                .get(resourceId);
+        if(KeyOwner == null){
+            return LockResult.NOT_HELD;
+        }
+
+        if(!KeyOwner.equals(clientId)){
+            return LockResult.NOT_OWNER;
+        }
+
+        redisTemplate
+                .expire(resourceId,30,TimeUnit.SECONDS);;
+        historyService
+                .logEvent(resourceId,clientId,"Renewed",LocalDateTime.now().plusSeconds(30));
+        return LockResult.RENEW;
+
+
+    }
+
+
 
 
 
