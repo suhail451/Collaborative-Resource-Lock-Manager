@@ -17,26 +17,25 @@ public class LockController {
         this.lockService = lockService;
     }
 
-    @PostMapping("Lock/{resourceId}")
-    public ResponseEntity<String> acquireLock(@PathVariable String resourceId, @RequestBody String clientId){
-
-       LockService.LockResult result=lockService.acquireLock(resourceId,clientId);
+    @PostMapping("locks/{resourceId}")
+    public ResponseEntity<String> acquire(@PathVariable String resourceId, @RequestBody String clientId){
+        LockService.LockResult result=lockService.acquireLock(resourceId,clientId);
 
         return switch (result) {
             case ACQUIRED -> ResponseEntity.status(CREATED).body("Lock Acquired");
             case ALREADY_HELD -> ResponseEntity.status(CONFLICT).body("Lock is already acquired");
             default -> ResponseEntity.status(INTERNAL_SERVER_ERROR).body("Unexpected error");
         };
-
-
     }
-    @PatchMapping("renew/{resourceId}")
+
+
+    @PatchMapping("locks/{resourceId}/renew")
     public ResponseEntity<String> renew(@PathVariable String resourceId,@RequestBody String clientId){
         LockService.LockResult result=lockService.renewLock(resourceId,clientId);
 
         return switch (result){
             case NOT_HELD -> ResponseEntity.status(NOT_FOUND).body("Lock not found, Already Expired");
-            case NOT_OWNER -> ResponseEntity.status(NOT_ACCEPTABLE).body("This is not your lock");
+            case NOT_OWNER -> ResponseEntity.status(FORBIDDEN).body("Not your Lock");
             case RENEW -> ResponseEntity.status(OK).body("Lock renewed");
             default -> ResponseEntity.status(INTERNAL_SERVER_ERROR).body("Unexpected Error");
 
@@ -44,13 +43,13 @@ public class LockController {
     }
 
 
-    @DeleteMapping("release/{resourceId}")
+    @DeleteMapping("locks/{resourceId}")
     public ResponseEntity<String> delete(@PathVariable String resourceId,@RequestBody String clientId){
         LockService.LockResult result=lockService.releaseLock(resourceId,clientId);
 
         return switch(result){
             case RELEASED -> ResponseEntity.status(OK).body("Lock release Succesfully");
-            case NOT_OWNER -> ResponseEntity.status(NOT_ACCEPTABLE).body("It is not your Lock");
+            case NOT_OWNER -> ResponseEntity.status(FORBIDDEN).body("Not your Lock");
             case NOT_HELD -> ResponseEntity.status(NOT_FOUND).body("No lock found");
             default -> ResponseEntity.status(INTERNAL_SERVER_ERROR).body("Unexpected error");
 
@@ -60,13 +59,14 @@ public class LockController {
 
     }
 
+    @GetMapping("/{resourceId}")
+    public ResponseEntity<LockService.LockStatus> check(@PathVariable String resourceId){
+        LockService.LockStatus status = lockService.checkStatus(resourceId);
 
-    @GetMapping("check/{resourceId}")
-    public LockService.LockStatus checkStatus(@PathVariable String resourceId){
-        LockService.LockStatus mystatus=lockService.checkStatus(resourceId);
-        return mystatus;
-
-
+        if (status == null) {
+            return ResponseEntity.status(NOT_FOUND).body(null);
+        }
+        return ResponseEntity.status(OK).body(status);
     }
 
 }

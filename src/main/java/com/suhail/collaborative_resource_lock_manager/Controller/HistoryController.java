@@ -18,7 +18,7 @@ public class HistoryController {
     }
 
 
-    @GetMapping("history/{resourceId}")
+    @GetMapping("locks/{resourceId}/history")
     public List<HistoryEntity> history(@PathVariable String resourceId){
         return historyService.findByResourceId(resourceId);
 
