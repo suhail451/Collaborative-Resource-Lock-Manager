@@ -28,6 +28,10 @@ public class LockService  {
         this.redisTemplate = redisTemplate;
     }
 
+
+
+
+//    Acquire lock
     public LockResult acquireLock(String resourceId,String clientId){
         Boolean acquired=redisTemplate.opsForValue()
                 .setIfAbsent(resourceId,clientId,30, TimeUnit.SECONDS);
@@ -41,6 +45,12 @@ public class LockService  {
 
     }
 
+
+
+
+
+
+//    Renew Lock
     public LockResult renewLock(String resourceId,String clientId){
 
         String KeyOwner=redisTemplate.opsForValue()
@@ -61,6 +71,12 @@ public class LockService  {
 
 
     }
+
+
+
+//    Release Lock
+
+
     public LockResult releaseLock(String resourceId, String clientId) {
         String currentHolder = redisTemplate.opsForValue().get(resourceId);
 
@@ -77,6 +93,8 @@ public class LockService  {
     }
     public record LockStatus(boolean locked, String holder, long remainingSeconds) {}
 
+
+//    Check Status
     public LockStatus checkStatus(String resourceId) {
         String currentHolder = redisTemplate.opsForValue().get(resourceId);
 
