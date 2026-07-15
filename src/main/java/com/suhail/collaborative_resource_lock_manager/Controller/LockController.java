@@ -61,5 +61,12 @@ public class LockController {
     }
 
 
+    @GetMapping("check/{resourceId}")
+    public LockService.LockStatus checkStatus(@PathVariable String resourceId){
+        LockService.LockStatus mystatus=lockService.checkStatus(resourceId);
+        return mystatus;
+
+
+    }
 
 }

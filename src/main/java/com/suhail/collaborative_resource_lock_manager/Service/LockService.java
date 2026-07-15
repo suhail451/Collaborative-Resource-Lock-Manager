@@ -85,6 +85,8 @@ public class LockService  {
         historyService.logEvent(resourceId, clientId, "RELEASED", null);
         return LockResult.RELEASED;
     }
+
+
     public record LockStatus(boolean locked, String holder, long remainingSeconds) {}
 
 
