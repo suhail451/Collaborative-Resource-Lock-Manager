@@ -28,9 +28,6 @@ public class LockService  {
         this.redisTemplate = redisTemplate;
     }
 
-
-
-
 //    Acquire lock
     public LockResult acquireLock(String resourceId,String clientId){
         Boolean acquired=redisTemplate.opsForValue()
@@ -44,9 +41,6 @@ public class LockService  {
         return LockResult.ALREADY_HELD;
 
     }
-
-
-
 
 
 

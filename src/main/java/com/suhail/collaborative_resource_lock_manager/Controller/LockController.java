@@ -3,13 +3,9 @@ package com.suhail.collaborative_resource_lock_manager.Controller;
 
 import com.suhail.collaborative_resource_lock_manager.Service.LockService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import static com.suhail.collaborative_resource_lock_manager.Service.LockService.LockResult.ACQUIRED;
-import static com.suhail.collaborative_resource_lock_manager.Service.LockService.LockResult.ALREADY_HELD;
+import static com.suhail.collaborative_resource_lock_manager.Service.LockService.LockResult.*;
 import static org.springframework.http.HttpStatus.*;
 
 @RestController
@@ -35,7 +31,20 @@ public class LockController {
 
     }
 
+    @DeleteMapping("release/{resourceId}")
+    public ResponseEntity<String> delete(@PathVariable String resourceId,@RequestBody String clientId){
+        LockService.LockResult result=lockService.releaseLock(resourceId,clientId);
 
+        return switch(result){
+            case RELEASED -> ResponseEntity.status(OK).body("Lock release Succesfully");
+            case NOT_OWNER -> ResponseEntity.status(NOT_ACCEPTABLE).body("It is not your Lock");
+            default -> ResponseEntity.status(NOT_FOUND).body("No lock found");
+
+        };
+
+
+
+    }
 
 
 
