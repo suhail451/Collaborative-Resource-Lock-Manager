@@ -1,6 +1,9 @@
 package com.suhail.collaborative_resource_lock_manager.Service;
 
-
+import com.suhail.collaborative_resource_lock_manager.Exception.InvalidLockRequestException;
+import com.suhail.collaborative_resource_lock_manager.Exception.LockOwnershipException;
+import com.suhail.collaborative_resource_lock_manager.Exception.NoActiveLockException;
+import com.suhail.collaborative_resource_lock_manager.Exception.ResourceAlreadyLocked;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -8,104 +11,201 @@ import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 @Service
-public class LockService  {
+public class LockService {
 
     public enum LockResult {
         ACQUIRED,
-        ALREADY_HELD,
-        NOT_HELD,
-        NOT_OWNER,
-        RENEW,
+        RENEWED,
         RELEASED
-
     }
 
-    final HistoryService historyService;
-    final RedisTemplate<String,String> redisTemplate;
+    private final HistoryService historyService;
+    private final RedisTemplate<String, String> redisTemplate;
 
-    public LockService(HistoryService historyService, RedisTemplate<String, String> redisTemplate) {
+    private static final long LOCK_DURATION = 30;
+
+    public LockService(
+            HistoryService historyService,
+            RedisTemplate<String, String> redisTemplate
+    ) {
         this.historyService = historyService;
         this.redisTemplate = redisTemplate;
     }
 
-//    Acquire lock
-    public LockResult acquireLock(String resourceId,String clientId){
-        Boolean acquired=redisTemplate.opsForValue()
-                .setIfAbsent(resourceId,clientId,30, TimeUnit.SECONDS);
 
-    if (acquired){
-        historyService.logEvent(resourceId,clientId,"Acquired",LocalDateTime.now().plusSeconds(30));
-        return LockResult.ACQUIRED;
+    // Acquire Lock
+    public LockResult acquireLock(String resourceId, String clientId)
+            throws ResourceAlreadyLocked, InvalidLockRequestException {
+
+        validateLockRequest(resourceId, clientId);
+
+        Boolean acquired = redisTemplate.opsForValue()
+                .setIfAbsent(
+                        resourceId,
+                        clientId,
+                        LOCK_DURATION,
+                        TimeUnit.SECONDS
+                );
+
+        if (Boolean.TRUE.equals(acquired)) {
+
+            historyService.logEvent(
+                    resourceId,
+                    clientId,
+                    "ACQUIRED",
+                    LocalDateTime.now().plusSeconds(LOCK_DURATION)
+            );
+
+            return LockResult.ACQUIRED;
+        }
+
+        throw new ResourceAlreadyLocked(
+                "Resource " + resourceId + " is already locked."
+        );
     }
 
-        return LockResult.ALREADY_HELD;
 
-    }
+    // Renew Lock
+    public LockResult renewLock(String resourceId, String clientId)
+            throws NoActiveLockException, LockOwnershipException, InvalidLockRequestException {
 
+        validateLockRequest(resourceId, clientId);
 
-
-//    Renew Lock
-    public LockResult renewLock(String resourceId,String clientId){
-
-        String KeyOwner=redisTemplate.opsForValue()
+        String keyOwner = redisTemplate.opsForValue()
                 .get(resourceId);
-        if(KeyOwner == null){
-            return LockResult.NOT_HELD;
+
+        if (keyOwner == null) {
+            throw new NoActiveLockException(
+                    "No active lock exists on " + resourceId
+            );
         }
 
-        if(!KeyOwner.equals(clientId)){
-            return LockResult.NOT_OWNER;
+        if (!keyOwner.equals(clientId)) {
+            throw new LockOwnershipException(
+                    "You are not the owner of this lock."
+            );
         }
 
-        redisTemplate
-                .expire(resourceId,30,TimeUnit.SECONDS);;
-        historyService
-                .logEvent(resourceId,clientId,"Renewed",LocalDateTime.now().plusSeconds(30));
-        return LockResult.RENEW;
+
+        redisTemplate.expire(
+                resourceId,
+                LOCK_DURATION,
+                TimeUnit.SECONDS
+        );
 
 
+        historyService.logEvent(
+                resourceId,
+                clientId,
+                "RENEWED",
+                LocalDateTime.now().plusSeconds(LOCK_DURATION)
+        );
+
+
+        return LockResult.RENEWED;
     }
 
 
 
-//    Release Lock
+    // Release Lock
+    public LockResult releaseLock(String resourceId, String clientId)
+            throws NoActiveLockException, LockOwnershipException, InvalidLockRequestException {
 
+        validateLockRequest(resourceId, clientId);
 
-    public LockResult releaseLock(String resourceId, String clientId) {
-        String currentHolder = redisTemplate.opsForValue().get(resourceId);
+        String currentHolder = redisTemplate.opsForValue()
+                .get(resourceId);
+
 
         if (currentHolder == null) {
-            return LockResult.NOT_HELD;
-        }
-        if (!currentHolder.equals(clientId)) {
-            return LockResult.NOT_OWNER;
+            throw new NoActiveLockException(
+                    "No active lock exists on " + resourceId
+            );
         }
 
+
+        if (!currentHolder.equals(clientId)) {
+            throw new LockOwnershipException(
+                    "You are not the owner of this lock."
+            );
+        }
+
+
         redisTemplate.delete(resourceId);
-        historyService.logEvent(resourceId, clientId, "RELEASED", null);
+
+
+        historyService.logEvent(
+                resourceId,
+                clientId,
+                "RELEASED",
+                null
+        );
+
+
         return LockResult.RELEASED;
     }
 
 
-    public record LockStatus(boolean locked, String holder, long remainingSeconds) {}
+
+    // Check Lock Status
+    public LockStatus checkStatus(String resourceId)
+            throws InvalidLockRequestException {
+
+        if(resourceId == null || resourceId.isBlank()){
+            throw new InvalidLockRequestException(
+                    "Resource ID cannot be empty."
+            );
+        }
 
 
-//    Check Status
-    public LockStatus checkStatus(String resourceId) {
-        String currentHolder = redisTemplate.opsForValue().get(resourceId);
+        String currentHolder = redisTemplate.opsForValue()
+                .get(resourceId);
 
-        if (currentHolder == null) {
+
+        if(currentHolder == null){
             return new LockStatus(false, null, 0);
         }
 
-        Long remaining = redisTemplate.getExpire(resourceId, TimeUnit.SECONDS);
-        return new LockStatus(true, currentHolder, remaining != null ? remaining : 0);
+
+        Long remainingTime = redisTemplate.getExpire(
+                resourceId,
+                TimeUnit.SECONDS
+        );
+
+
+        return new LockStatus(
+                true,
+                currentHolder,
+                remainingTime != null ? remainingTime : 0
+        );
     }
 
 
 
+    // Validation Helper Method
+    private void validateLockRequest(String resourceId, String clientId)
+            throws InvalidLockRequestException {
+
+        if(resourceId == null || resourceId.isBlank()){
+            throw new InvalidLockRequestException(
+                    "Resource ID cannot be empty."
+            );
+        }
 
 
+        if(clientId == null || clientId.isBlank()){
+            throw new InvalidLockRequestException(
+                    "Client ID cannot be empty."
+            );
+        }
+    }
+
+
+
+    public record LockStatus(
+            boolean locked,
+            String holder,
+            long remainingSeconds
+    ) {}
 
 }
-

@@ -79,7 +79,18 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponseDTO>
+    handleGeneric(Exception ex){
 
+        ErrorResponseDTO myerror= new ErrorResponseDTO();
+
+        myerror.setMessage(ex.getMessage());
+        myerror.setStatus(501);
+        myerror.setTimestamp(LocalDateTime.now());
+
+        return new ResponseEntity<>(myerror,HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 
 
 }
