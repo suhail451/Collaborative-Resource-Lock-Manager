@@ -1,6 +1,7 @@
 package com.suhail.collaborative_resource_lock_manager.Exception;
 
 
+import org.hibernate.metamodel.internal.EmbeddableRepresentationStrategyPojo;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -64,6 +65,19 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(InvalidLockRequestException.class)
+    public ResponseEntity<ErrorResponseDTO> handleInvalidLockRequest(InvalidLockRequestException ex){
+
+                ErrorResponseDTO myerror= new ErrorResponseDTO();
+
+                myerror.setMessage(ex.getMessage());
+                myerror.setStatus(403);
+                myerror.setTimestamp(LocalDateTime.now());
+
+                return new ResponseEntity<>(myerror,HttpStatus.FORBIDDEN);
+
+
+    }
 
 
 
