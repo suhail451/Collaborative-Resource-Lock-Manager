@@ -1,72 +1,84 @@
 package com.suhail.collaborative_resource_lock_manager.Controller;
 
-
+import com.suhail.collaborative_resource_lock_manager.Exception.InvalidLockRequestException;
+import com.suhail.collaborative_resource_lock_manager.Exception.LockOwnershipException;
+import com.suhail.collaborative_resource_lock_manager.Exception.NoActiveLockException;
+import com.suhail.collaborative_resource_lock_manager.Exception.ResourceAlreadyLocked;
 import com.suhail.collaborative_resource_lock_manager.Service.LockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import static com.suhail.collaborative_resource_lock_manager.Service.LockService.LockResult.*;
-import static org.springframework.http.HttpStatus.*;
+import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.OK;
 
 @RestController
+@RequestMapping("/locks")
 public class LockController {
 
-    final LockService lockService;
+    private final LockService lockService;
 
     public LockController(LockService lockService) {
         this.lockService = lockService;
     }
 
-    @PostMapping("locks/{resourceId}")
-    public ResponseEntity<String> acquire(@PathVariable String resourceId, @RequestBody String clientId){
-        LockService.LockResult result=lockService.acquireLock(resourceId,clientId);
 
-        return switch (result) {
-            case ACQUIRED -> ResponseEntity.status(CREATED).body("Lock Acquired");
-            case ALREADY_HELD -> ResponseEntity.status(CONFLICT).body("Lock is already acquired");
-            default -> ResponseEntity.status(INTERNAL_SERVER_ERROR).body("Unexpected error");
-        };
+    // Acquire Lock
+    @PostMapping("/{resourceId}")
+    public ResponseEntity<String> acquire(
+            @PathVariable String resourceId,
+            @RequestBody String clientId
+    ) throws InvalidLockRequestException, ResourceAlreadyLocked {
+
+        lockService.acquireLock(resourceId, clientId);
+
+        return ResponseEntity
+                .status(CREATED)
+                .body("Lock acquired successfully");
     }
 
 
-    @PatchMapping("locks/{resourceId}/renew")
-    public ResponseEntity<String> renew(@PathVariable String resourceId,@RequestBody String clientId){
-        LockService.LockResult result=lockService.renewLock(resourceId,clientId);
 
-        return switch (result){
-            case NOT_HELD -> ResponseEntity.status(NOT_FOUND).body("Lock not found, Already Expired");
-            case NOT_OWNER -> ResponseEntity.status(FORBIDDEN).body("Not your Lock");
-            case RENEW -> ResponseEntity.status(OK).body("Lock renewed");
-            default -> ResponseEntity.status(INTERNAL_SERVER_ERROR).body("Unexpected Error");
+    // Renew Lock
+    @PatchMapping("/{resourceId}/renew")
+    public ResponseEntity<String> renew(
+            @PathVariable String resourceId,
+            @RequestBody String clientId
+    ) throws InvalidLockRequestException, NoActiveLockException, LockOwnershipException {
 
-        };
+        lockService.renewLock(resourceId, clientId);
+
+        return ResponseEntity
+                .status(OK)
+                .body("Lock renewed successfully");
     }
 
 
-    @DeleteMapping("locks/{resourceId}")
-    public ResponseEntity<String> delete(@PathVariable String resourceId,@RequestBody String clientId){
-        LockService.LockResult result=lockService.releaseLock(resourceId,clientId);
 
-        return switch(result){
-            case RELEASED -> ResponseEntity.status(OK).body("Lock release Succesfully");
-            case NOT_OWNER -> ResponseEntity.status(FORBIDDEN).body("Not your Lock");
-            case NOT_HELD -> ResponseEntity.status(NOT_FOUND).body("No lock found");
-            default -> ResponseEntity.status(INTERNAL_SERVER_ERROR).body("Unexpected error");
+    // Release Lock
+    @DeleteMapping("/{resourceId}")
+    public ResponseEntity<String> release(
+            @PathVariable String resourceId,
+            @RequestBody String clientId
+    ) throws InvalidLockRequestException, NoActiveLockException, LockOwnershipException {
 
-        };
+        lockService.releaseLock(resourceId, clientId);
 
-
-
+        return ResponseEntity
+                .status(OK)
+                .body("Lock released successfully");
     }
 
+
+
+    // Check Lock Status
     @GetMapping("/{resourceId}")
-    public ResponseEntity<LockService.LockStatus> check(@PathVariable String resourceId){
-        LockService.LockStatus status = lockService.checkStatus(resourceId);
+    public ResponseEntity<LockService.LockStatus> check(
+            @PathVariable String resourceId
+    ) throws InvalidLockRequestException {
 
-        if (status == null) {
-            return ResponseEntity.status(NOT_FOUND).body(null);
-        }
-        return ResponseEntity.status(OK).body(status);
+        return ResponseEntity
+                .status(OK)
+                .body(lockService.checkStatus(resourceId));
     }
 
 }
