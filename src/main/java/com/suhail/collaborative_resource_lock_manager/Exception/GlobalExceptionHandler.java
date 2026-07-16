@@ -1,7 +1,6 @@
 package com.suhail.collaborative_resource_lock_manager.Exception;
 
 
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,4 +22,23 @@ public class GlobalExceptionHandler {
                     return new ResponseEntity<>(myerror, HttpStatus.NOT_FOUND);
 
 }
+
+
+
+
+
+    @ExceptionHandler(ResourceAlreadyLocked.class)
+    public ResponseEntity<ErrorResponseDTO> handleResourceAlreadyExist(ResourceAlreadyLocked ex){
+                ErrorResponseDTO error=new ErrorResponseDTO();
+
+                error.setMessage(ex.getMessage());
+                error.setTimestamp(LocalDateTime.now());
+                error.setStatus(409);
+
+                return new ResponseEntity<>(error,HttpStatus.CONFLICT);
+
+
     }
+}
+
+
