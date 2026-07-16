@@ -53,6 +53,17 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(LockOwnershipException.class)
+    public ResponseEntity<ErrorResponseDTO> handleLockOwner(LockOwnershipException ex)
+    {
+        ErrorResponseDTO error = new ErrorResponseDTO();
+        error.setMessage(ex.getMessage());
+        error.setStatus(403);
+        error.setTimestamp(LocalDateTime.now());
+        return new ResponseEntity<>(error,HttpStatus.FORBIDDEN);
+
+    }
+
 
 
 
