@@ -39,6 +39,24 @@ public class GlobalExceptionHandler {
 
 
     }
+
+    @ExceptionHandler(NoActiveLockException.class)
+    public ResponseEntity<ErrorResponseDTO> handleNoLock(NoActiveLockException ex)
+    {
+        ErrorResponseDTO error = new ErrorResponseDTO();
+        error.setMessage(ex.getMessage());
+        error.setTimestamp(LocalDateTime.now());
+        error.setStatus(409);
+
+        return new ResponseEntity<>(error,HttpStatus.CONFLICT);
+
+
+    }
+
+
+
+
+
 }
 
 
