@@ -22,7 +22,7 @@ public class LockService {
     private final HistoryService historyService;
     private final RedisTemplate<String, String> redisTemplate;
 
-    private static final long LOCK_DURATION = 30;
+    private static final long LOCK_DURATION = 50;
 
     public LockService(
             HistoryService historyService,
