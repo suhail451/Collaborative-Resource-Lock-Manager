@@ -6,14 +6,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.*;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -76,8 +79,22 @@ public class AuthVaultValidationFilter extends OncePerRequestFilter {
                 if (body.isValid()) {
                     // AuthVault says YES. Set local security context.
                     String principalUser = body.getUsername() != null ? body.getUsername() : "anonymous";
+
+                    // Carry the role AuthVault reports (e.g. "CLIENT", "ROLE_ADMIN") as a
+                    // GrantedAuthority so @PreAuthorize/hasRole(...) checks work downstream.
+                    // Spring's hasRole() expects a "ROLE_" prefix, so normalize for it while
+                    // still exposing the raw role via hasAuthority(...) if needed.
+                    List<GrantedAuthority> authorities;
+                    String role = body.getRole();
+                    if (role == null || role.isBlank()) {
+                        authorities = Collections.emptyList();
+                    } else {
+                        String normalizedRole = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+                        authorities = Collections.singletonList(new SimpleGrantedAuthority(normalizedRole));
+                    }
+
                     UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(principalUser, null, new ArrayList<>());
+                            new UsernamePasswordAuthenticationToken(principalUser, null, authorities);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
                     // Let the request proceed to your Lock Manager controller
@@ -99,10 +116,13 @@ public class AuthVaultValidationFilter extends OncePerRequestFilter {
     private static class AuthResponse {
         private boolean valid;
         private String username;
+        private String role;
 
         public boolean isValid() { return valid; }
         public void setValid(boolean valid) { this.valid = valid; }
         public String getUsername() { return username; }
         public void setUsername(String username) { this.username = username; }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
     }
 }
