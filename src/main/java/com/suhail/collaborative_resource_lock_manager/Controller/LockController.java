@@ -8,6 +8,7 @@ import com.suhail.collaborative_resource_lock_manager.Service.LockService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import static org.springframework.http.HttpStatus.CREATED;
@@ -31,10 +32,11 @@ public class LockController {
     @PostMapping("/{resourceId}")
     public ResponseEntity<String> acquire(
             @PathVariable String resourceId,
-            @RequestBody String clientId
+            Authentication authentication
     ) throws InvalidLockRequestException, ResourceAlreadyLocked {
 
-        lockService.acquireLock(resourceId, clientId);
+        String ownerId = authentication.getName();
+        lockService.acquireLock(resourceId, ownerId);
 
         return ResponseEntity
                 .status(CREATED)
@@ -48,10 +50,11 @@ public class LockController {
     @PatchMapping("/{resourceId}/renew")
     public ResponseEntity<String> renew(
             @PathVariable String resourceId,
-            @RequestBody String clientId
+            Authentication authentication
     ) throws InvalidLockRequestException, NoActiveLockException, LockOwnershipException {
 
-        lockService.renewLock(resourceId, clientId);
+        String ownerId = authentication.getName();
+        lockService.renewLock(resourceId, ownerId);
 
         return ResponseEntity
                 .status(OK)
@@ -66,10 +69,11 @@ public class LockController {
     @DeleteMapping("/{resourceId}")
     public ResponseEntity<String> release(
             @PathVariable String resourceId,
-            @RequestBody String clientId
+            Authentication authentication
     ) throws InvalidLockRequestException, NoActiveLockException, LockOwnershipException {
 
-        lockService.releaseLock(resourceId, clientId);
+        String ownerId = authentication.getName();
+        lockService.releaseLock(resourceId, ownerId);
 
         return ResponseEntity
                 .status(OK)
