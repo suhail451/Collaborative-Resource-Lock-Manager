@@ -34,12 +34,12 @@ Java · Spring Boot · Spring Data JPA · Redis · MySQL · JWT
 
 - [x] Project scaffolding
 - [x] `HistoryEntity` — persisted audit record for lock lifecycle events
-- [ ] Repository layer
-- [ ] Redis connection verified
-- [ ] Service layer: acquire / renew / release / status logic
-- [ ] Controller layer (unsecured, tested via Postman)
-- [ ] JWT verification via Auth Vault shared secret
-- [ ] Edge case handling + tests
+- [x] Repository layer
+- [x] Redis connection verified
+- [x] Service layer: acquire / renew / release / status logic
+- [x] Controller layer (unsecured, tested via Postman)
+- [x] JWT verification via Auth Vault shared secret
+- [x] Edge case handling + tests
 - [ ] Final documentation
 
 ## Related Project
